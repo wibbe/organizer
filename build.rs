@@ -1,12 +1,16 @@
 
+extern crate gl_generator;
+
 use std::char;
 use std::env;
 use std::fs::File;
 use std::io::{Write, BufReader, BufRead, LineWriter};
 use std::path::Path;
 
+use gl_generator::{Registry, Api, Profile, Fallbacks, GlobalGenerator};
 
-fn main() {
+
+fn generate_font_def() {
    let out_dir = env::var("OUT_DIR").unwrap();
    let out_path = Path::new(&out_dir).join("font_def.rs");
    let in_path = Path::new("res/font.fnt");
@@ -61,4 +65,19 @@ fn main() {
    out.write(b"      m\n");
    out.write(b"   };\n");
    out.write(b"}\n");
+}
+
+fn generate_gl_bindings() {
+    let dest = env::var("OUT_DIR").unwrap();
+    let path = Path::new(&dest).join("gl_bindings.rs");
+    let mut file = File::create(&path).unwrap();
+
+    Registry::new(Api::Gl, (1, 1), Profile::Core, Fallbacks::All, [])
+        .write_bindings(GlobalGenerator, &mut file)
+        .unwrap();
+}
+
+fn main() {
+   generate_font_def();
+   generate_gl_bindings();
 }
