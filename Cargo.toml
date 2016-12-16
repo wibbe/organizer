@@ -1,0 +1,9 @@
+[package]
+name = "organizer"
+version = "0.1.0"
+authors = ["Daniel Wiberg <daniel@skillster.se>"]
+
+[dependencies]
+gl = "0.6.1"
+libc = "0.2.18"
+glutin = "0.7.0"
