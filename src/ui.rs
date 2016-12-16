@@ -1,6 +1,6 @@
 
 use std::default::Default;
-use std::vec::Vec;
+use std::collections::HashMap;
 
 use ::gl;
 
@@ -49,7 +49,7 @@ impl Default for Cell {
 
 
 pub struct UI {
-    cells: Vec<Vec<Cell>>,
+    cells: HashMap<(u32, u32), Cell>,
     
     background_color: Color,
 
@@ -64,20 +64,8 @@ impl UI {
         let w = window_width / font_size;
         let h = window_height / font_size;
 
-        let mut cells = Vec::with_capacity(h as usize);
-        
-        for y in 0..h {
-            let mut row = Vec::with_capacity(w as usize);
-
-            for x in 0..w {
-                row.push(Cell::default());
-            }
-
-            cells.push(row);
-        }
-
         UI {
-            cells: cells,
+            cells: HashMap::new(),
             background_color: Color::new(40, 50, 60),
             font_size: font_size,
             width: w,
