@@ -9,7 +9,7 @@ pub struct App<'a> {
    ui: UI,
    window: &'a glutin::Window,
 
-   doc: Option<Box<Document>>,
+   doc: Box<Document>,
 }
 
 impl<'a> App<'a> {
@@ -19,6 +19,7 @@ impl<'a> App<'a> {
       App {
          ui: ui,
          window: window,
+         doc: Box::new(Document::default()),
       }
    }
 

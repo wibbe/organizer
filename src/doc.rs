@@ -7,6 +7,15 @@ pub struct Entry {
 }
 
 pub struct Document {
-   filename: PathBuf,
+   filename: Option<PathBuf>,
    entries: Vec<Entry>,
+}
+
+impl Default for Document {
+   fn default() -> Document {
+      Document {
+         filename: None,
+         entries: Vec::new(),
+      }
+   }
 }
