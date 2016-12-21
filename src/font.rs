@@ -3,22 +3,22 @@ use std::collections::HashMap;
 use std::fmt;
 use std::mem;
 
-use ::lazy_static;
 use ::gl;
 
 static FONT_DATA: &'static [u8] = include_bytes!("../res/font.data");
+static FONT_SIZE: f32 = 32.0;
 
 include!(concat!(env!("OUT_DIR"), "/font_def.rs"));
 
 #[derive(Copy, Clone, Debug)]
 pub struct Glyph {
-   x: u32,
-   y: u32,
-   width: u32,
-   height: u32,
-   x_offset: u32,
-   y_offset: u32,
-   advance: u32,
+   pub x: f32,
+   pub y: f32,
+   pub width: f32,
+   pub height: f32,
+   pub x_offset: u32,
+   pub y_offset: u32,
+   pub advance: u32,
 }
 
 impl fmt::Display for Glyph {
@@ -28,9 +28,20 @@ impl fmt::Display for Glyph {
 }
 
 
-pub fn get_glyph(ch: char) -> Option<Glyph> {
+#[inline]
+pub fn get_glyph<'a>(ch: char) -> Option<&'a Glyph> {
    let idx = ch as u32;
-   GLYPHS.get(&idx).cloned()
+   FONT_GLYPHS.get(&idx)
+}
+
+#[inline]
+pub fn line_height(size: u32) -> f32 {
+   FONT_LINE_HEIGHT * scale(size)
+}
+
+#[inline]
+pub fn scale(size: u32) -> f32 {
+   size as f32 / FONT_SIZE
 }
 
 pub fn create_texture() -> Result<u32, String> {
@@ -42,7 +53,7 @@ pub fn create_texture() -> Result<u32, String> {
       gl::BindTexture(gl::TEXTURE_2D, tex);
       gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER as u32, gl::LINEAR as i32);
       gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER as u32, gl::LINEAR as i32);
-      gl::TexImage2D(gl::TEXTURE_2D, 0, gl::LUMINANCE as i32, 512, 512, 0, gl::LUMINANCE, gl::UNSIGNED_BYTE, mem::transmute(FONT_DATA.as_ptr()));
+      gl::TexImage2D(gl::TEXTURE_2D, 0, gl::ALPHA as i32, FONT_TEX_WIDTH as i32, FONT_TEX_HEIGHT as i32, 0, gl::ALPHA, gl::UNSIGNED_BYTE, mem::transmute(FONT_DATA.as_ptr()));
       
       let err = gl::GetError();
       if err != gl::NO_ERROR {
@@ -53,4 +64,34 @@ pub fn create_texture() -> Result<u32, String> {
    }
 
    Ok(tex as u32)
+}
+
+pub fn draw_glyph(x: f32, y: f32, size: u32, glyph: &Glyph) {
+   let scale = scale(size);
+
+   let w = glyph.width * FONT_TEX_WIDTH as f32 * scale;
+   let h = glyph.height * FONT_TEX_HEIGHT as f32 * scale;
+   let ox = glyph.x_offset as f32 * scale;
+   let oy = glyph.y_offset as f32 * scale;
+
+   let tl = (x + ox, y + oy);
+   let tr = (x + ox + w, y + oy);
+   let bl = (x + ox, y + oy + h);
+   let br = (x + ox + w, y + oy + h);
+
+   unsafe {
+      gl::Begin(gl::QUADS);
+         gl::TexCoord2f(glyph.x, glyph.y);
+         gl::Vertex2f(tl.0, tl.1);
+
+         gl::TexCoord2f(glyph.x + glyph.width, glyph.y);
+         gl::Vertex2f(tr.0, tr.1);
+
+         gl::TexCoord2f(glyph.x + glyph.width, glyph.y + glyph.height);
+         gl::Vertex2f(br.0, br.1);
+
+         gl::TexCoord2f(glyph.x, glyph.y + glyph.height);
+         gl::Vertex2f(bl.0, bl.1);
+      gl::End();
+   }
 }

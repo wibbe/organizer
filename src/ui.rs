@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use ::gl;
 use ::font;
 
+#[derive(Copy, Clone, Debug)]
 pub struct Color {
     r: u8,
     g: u8,
@@ -31,7 +32,7 @@ impl Color {
 
 }
 
-
+#[derive(Copy, Clone, Debug)]
 struct Cell {
     ch: char,
     foreground: Color,
@@ -48,14 +49,27 @@ impl Default for Cell {
     }
 }
 
+impl Cell {
+    pub fn new(ch: char, foreground: Color, background: Color) -> Cell {
+        Cell {
+            ch: ch,
+            foreground: foreground,
+            background: background,
+        }
+    }
+}
+
+
 
 pub struct UI {
     cells: HashMap<(u32, u32), Cell>,
     
     background_color: Color,
 
-    font_tex: u32,    
+    font_tex: u32,
     font_size: u32,
+    cell_width: f32,
+    cell_height: f32,
     width: u32,
     height: u32,
 }
@@ -75,14 +89,37 @@ impl UI {
             Err(e) => return Err(e),
         };
 
+        let scale = font::scale(font_size);
+        let cell_width = font::get_glyph(' ').unwrap().advance as f32 * scale;
+        let cell_height = font::line_height(font_size);
+
         Ok(UI {
             cells: HashMap::new(),
             background_color: Color::new(40, 50, 60),
             font_tex: tex,
             font_size: font_size,
+            cell_width: cell_width,
+            cell_height: cell_height,
             width: w,
             height: h,
         })
+    }
+
+    pub fn clear(&mut self) {
+        self.cells.clear();
+    }
+
+    pub fn print(&mut self, x: u32, y: u32, text: &str, foreground: Color, background: Color) {
+        for (i, ch) in text.chars().enumerate() {
+            let mut cell = self.cells.entry((x + i as u32, y)).or_insert(Cell::default());
+            cell.ch = ch;
+            cell.foreground = foreground;
+            cell.background = background;
+        }
+    }
+
+    pub fn set(&mut self, x: u32, y: u32, cell: Cell) {
+        self.cells.insert((x, y), cell);
     }
 
     pub fn paint(&self, window_width: u32, window_height: u32) {
@@ -97,13 +134,32 @@ impl UI {
             gl::ClearColor(r, g, b, a);
             gl::Clear(gl::COLOR_BUFFER_BIT);
 
+            gl::Enable(gl::BLEND);
+            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+
             gl::BindTexture(gl::TEXTURE_2D, self.font_tex);
-            gl::Begin(gl::QUADS);
-                gl::TexCoord2f(0.0, 0.0); gl::Vertex2f(0.0, 0.0);
-                gl::TexCoord2f(1.0, 0.0); gl::Vertex2f(window_width as f32, 0.0);
-                gl::TexCoord2f(1.0, 1.0); gl::Vertex2f(window_width as f32, window_height as f32);
-                gl::TexCoord2f(0.0, 1.0); gl::Vertex2f(0.0, window_height as f32);
-            gl::End();
+
+            let max_x = (window_width as f32 / self.cell_width).floor() as u32;
+            let max_y = (window_height as f32 / self.cell_height).floor() as u32;
+
+            for (&(x, y), cell) in &self.cells {
+                if x <= max_x && y <= max_y {
+                    let x = x as f32 * self.cell_width;
+                    let y = y as f32 * self.cell_height;
+
+                    let glyph = font::get_glyph(cell.ch).unwrap();
+                    font::draw_glyph(x, y, self.font_size, glyph);
+                }
+            }
+
+/*
+            for ch in "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZzÅåÄäÖö0123456789".chars() {
+                let glyph = font::get_glyph(ch).unwrap();
+                font::draw_glyph(x, 0.0, self.font_size, glyph);
+                x += glyph.advance as f32 * scale;
+            }
+*/
+
         }
     }
 }

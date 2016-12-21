@@ -9,6 +9,21 @@ use std::path::Path;
 
 use gl_generator::{Registry, Api, Profile, Fallbacks, GlobalGenerator};
 
+fn parse_options(options: Vec<String>) -> Vec<(String, i32)> {
+   options.iter().fold(Vec::new(), |mut acc, ref x| {
+      let option = x.split('=').collect::<Vec<&str>>();
+      
+      if option.len() == 2 {
+         acc.push((String::from(option[0]), option[1].parse::<i32>().unwrap_or(0)));
+      }
+
+      acc
+   })
+}
+
+fn find_option(name: &str, options: &Vec<(String, i32)>) -> Option<i32> {
+   options.iter().find(|ref el| el.0.as_str() == name).map(|ref el| el.1)
+}
 
 fn generate_font_def() {
    let out_dir = env::var("OUT_DIR").unwrap();
@@ -19,47 +34,67 @@ fn generate_font_def() {
    let mut out = LineWriter::new(out);
    let reader = BufReader::new(File::open(&in_path).unwrap());
 
-   println!("cargo:rerun-if-changed={}", in_path.display());
-
-   out.write(b"lazy_static! {\n");
-   out.write(b"   static ref GLYPHS: HashMap<u32, Glyph> = {\n");
-   out.write(b"      let mut m = HashMap::new();\n");
+   let mut tex_w = 0;
+   let mut tex_h = 0;
+   let mut line_height = 0;
+   let mut base_line = 0;
+   let mut chars = Vec::new();
 
    for line in reader.lines() {
       let line = line.unwrap();
-      let parts = line.split_whitespace().map(|x| String::from(x)).collect::<Vec<String>>();
-      
-      if parts.len() == 11 && parts[0] == "char" {
-         let mut ch: u32 = 0;
-         let mut x: i32 = -1;
-         let mut y: i32 = -1;
-         let mut xo: i32 = -1;
-         let mut yo: i32 = -1;
-         let mut w: i32 = -1;
-         let mut h: i32 = -1;
-         let mut a: i32 = 0;
 
-         for part in parts.iter() {
-            let el = part.split('=').collect::<Vec<_>>();
-            if el.len() == 2 {
-               match el[0] {
-                  "id" => { ch = el[1].parse().unwrap_or(0); },
-                  "x" => { x = el[1].parse().unwrap_or(-1); },
-                  "y" => { y = el[1].parse().unwrap_or(-1); },
-                  "width" => { w = el[1].parse().unwrap_or(-1); },
-                  "height" => { h = el[1].parse().unwrap_or(-1); },
-                  "xoffset" => { xo = el[1].parse().unwrap_or(-1); },
-                  "yoffset" => { yo = el[1].parse().unwrap_or(-1); },
-                  "xadvance" => { a = el[1].parse().unwrap_or(-1); },
-                  _ => ()
-               }
-            }
-         }
+      let mut line_parts = line.split_whitespace().map(|x| String::from(x)).collect::<Vec<String>>();
 
-         if ch != 0 && x != -1 && y != -1 && xo != -1 && yo != -1 && w != -1 && h != -1 && a != -1 {
-            writeln!(out, "      m.insert({:4}, Glyph {{ x: {:3}, y: {:3}, width: {:3}, height: {:3}, x_offset: {:3}, y_offset: {:3}, advance: {:3} }});     // Char({})", ch, x, y, w, h, xo, yo, a, char::from_u32(ch).unwrap());
-         }
+      match line_parts[0].as_str() {
+         "common" => {
+            let options = parse_options(line_parts);
+            tex_w = find_option("scaleW", &options).unwrap();
+            tex_h = find_option("scaleH", &options).unwrap();
+            line_height = find_option("lineHeight", &options).unwrap();
+            base_line = find_option("base", &options).unwrap();
+         },
+         
+         "char" => {
+            let options = parse_options(line_parts);
+            chars.push((
+               find_option("id", &options).unwrap(),
+               find_option("x", &options).unwrap(),
+               find_option("y", &options).unwrap(),
+               find_option("width", &options).unwrap(),
+               find_option("height", &options).unwrap(),
+               find_option("xoffset", &options).unwrap(),
+               find_option("yoffset", &options).unwrap(),
+               find_option("xadvance", &options).unwrap()
+            ));
+         },
+
+         _ => (),
       }
+   }
+
+   println!("cargo:rerun-if-changed={}", in_path.display());
+
+   // Generate output file
+   writeln!(out, "pub static FONT_TEX_WIDTH: u32 = {};", tex_w);
+   writeln!(out, "pub static FONT_TEX_HEIGHT: u32 = {};", tex_w);
+   writeln!(out, "pub static FONT_LINE_HEIGHT: f32 = {:.1};", line_height as f32);
+   writeln!(out, "pub static FONT_BASE: f32 = {:.1};", base_line as f32);
+   out.write(b"\n");
+   out.write(b"lazy_static! {\n");
+   out.write(b"   static ref FONT_GLYPHS: HashMap<u32, Glyph> = {\n"); 
+   out.write(b"      let mut m = HashMap::new();\n");
+
+   let tw = tex_w as f32;
+   let th = tex_h as f32;
+
+   for (ch, x, y, w, h, xo, yo, a) in chars {
+      writeln!(out, "      m.insert({:4}, Glyph {{ x: {:.6}, y: {:.6}, width: {:.6}, height: {:.6}, x_offset: {:2}, y_offset: {:2}, advance: {:2} }});     // Char({})", 
+         ch,
+         x as f32 / tw,
+         y as f32 / th,
+         w as f32 / tw,
+         h as f32 / th,
+         xo, yo, a, char::from_u32(ch as u32).unwrap());
    }
 
    out.write(b"      m\n");
