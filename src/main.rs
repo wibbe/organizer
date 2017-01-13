@@ -26,7 +26,7 @@ fn main() {
 
     gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
 
-    let ui = UI::new(14, 800, 500).unwrap();
+    let ui = UI::new(800, 500).unwrap();
     let mut app = App::new(ui, &window);
 
     let background = Color::new(40, 50, 60);

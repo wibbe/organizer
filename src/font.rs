@@ -34,13 +34,8 @@ pub fn get_glyph<'a>(ch: char) -> Option<&'a Glyph> {
 }
 
 #[inline]
-pub fn line_height(size: u32) -> f32 {
-   FONT_LINE_HEIGHT * scale(size)
-}
-
-#[inline]
-pub fn scale(size: u32) -> f32 {
-   size as f32 / FONT_SIZE
+pub fn line_height() -> f32 {
+   FONT_LINE_HEIGHT
 }
 
 pub fn create_texture() -> Result<u32, String> {
@@ -65,13 +60,11 @@ pub fn create_texture() -> Result<u32, String> {
    Ok(tex as u32)
 }
 
-pub fn draw_glyph(x: f32, y: f32, size: u32, glyph: &Glyph) {
-   let scale = scale(size);
-
-   let w = glyph.width * FONT_TEX_WIDTH as f32 * scale;
-   let h = glyph.height * FONT_TEX_HEIGHT as f32 * scale;
-   let ox = glyph.x_offset as f32 * scale;
-   let oy = glyph.y_offset as f32 * scale;
+pub fn draw_glyph(x: f32, y: f32, glyph: &Glyph) {
+   let w = glyph.width * FONT_TEX_WIDTH as f32;
+   let h = glyph.height * FONT_TEX_HEIGHT as f32;
+   let ox = glyph.x_offset as f32;
+   let oy = glyph.y_offset as f32;
 
    let tl = (x + ox, y + oy);
    let tr = (x + ox + w, y + oy);

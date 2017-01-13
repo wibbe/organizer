@@ -67,11 +67,8 @@ pub struct UI {
     background_color: Color,
 
     font_tex: u32,
-    font_size: u32,
     cell_width: f32,
     cell_height: f32,
-    width: u32,
-    height: u32,
 }
 
 impl Drop for UI {
@@ -80,28 +77,21 @@ impl Drop for UI {
 }
 
 impl UI {
-    pub fn new(font_size: u32, window_width: u32, window_height: u32) -> Result<UI, String> {
-        let w = window_width / font_size;
-        let h = window_height / font_size;
-
+    pub fn new(window_width: u32, window_height: u32) -> Result<UI, String> {
         let tex = match font::create_texture() {
             Ok(tex) => tex,
             Err(e) => return Err(e),
         };
 
-        let scale = font::scale(font_size);
-        let cell_width = font::get_glyph(' ').unwrap().advance as f32 * scale;
-        let cell_height = font::line_height(font_size);
+        let cell_width = font::get_glyph(' ').unwrap().advance as f32;
+        let cell_height = font::line_height();
 
         Ok(UI {
             cells: HashMap::new(),
             background_color: Color::new(40, 50, 60),
             font_tex: tex,
-            font_size: font_size,
             cell_width: cell_width,
             cell_height: cell_height,
-            width: w,
-            height: h,
         })
     }
 
@@ -148,7 +138,7 @@ impl UI {
                     let y = y as f32 * self.cell_height;
 
                     let glyph = font::get_glyph(cell.ch).unwrap();
-                    font::draw_glyph(x, y, self.font_size, glyph);
+                    font::draw_glyph(x, y, glyph);
                 }
             }
 
