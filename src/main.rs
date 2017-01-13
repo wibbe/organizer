@@ -36,12 +36,14 @@ fn main() {
     window.swap_buffers().unwrap();
 
     for event in window.wait_events() {
-        app.paint();
-        window.swap_buffers().unwrap();
-
         match event {
             glutin::Event::Closed => break,
+            glutin::Event::ReceivedCharacter(ch) => println!("Wrote char: {}", ch),
+            glutin::Event::Refresh => (),
             _ => ()
         }
+
+        app.paint();
+        window.swap_buffers().unwrap();
     }
 }
