@@ -39,6 +39,7 @@ fn generate_font_def() {
    let mut line_height = 0;
    let mut base_line = 0;
    let mut chars = Vec::new();
+   let mut size = 0;
 
    for line in reader.lines() {
       let line = line.unwrap();
@@ -53,6 +54,11 @@ fn generate_font_def() {
             line_height = find_option("lineHeight", &options).unwrap();
             base_line = find_option("base", &options).unwrap();
          },
+
+         "info" => {
+            let options = parse_options(line_parts);
+            size = find_option("size", &options).unwrap().abs();
+         }
          
          "char" => {
             let options = parse_options(line_parts);
@@ -76,18 +82,23 @@ fn generate_font_def() {
 
    // Generate output file
    writeln!(out, "pub static FONT_TEX_WIDTH: u32 = {};", tex_w);
-   writeln!(out, "pub static FONT_TEX_HEIGHT: u32 = {};", tex_w);
+   writeln!(out, "pub static FONT_TEX_HEIGHT: u32 = {};", tex_h);
    writeln!(out, "pub static FONT_LINE_HEIGHT: f32 = {:.1};", line_height as f32);
    writeln!(out, "pub static FONT_BASE: f32 = {:.1};", base_line as f32);
-   out.write(b"\n");
-   out.write(b"lazy_static! {\n");
-   out.write(b"   static ref FONT_GLYPHS: HashMap<u32, Glyph> = {\n"); 
-   out.write(b"      let mut m = HashMap::new();\n");
+   writeln!(out, "pub static FONT_SIZE: f32 = {:.1};", size as f32);
+   out.write(b"\n").unwrap();
+   out.write(b"lazy_static! {\n").unwrap();
+   out.write(b"   static ref FONT_GLYPHS: HashMap<u32, Glyph> = {\n").unwrap();
+   out.write(b"      let mut m = HashMap::new();\n").unwrap();
 
    let tw = tex_w as f32;
    let th = tex_h as f32;
 
    for (ch, x, y, w, h, xo, yo, a) in chars {
+      if ch == 0 || ch == 13 {
+         continue;
+      }
+
       writeln!(out, "      m.insert({:4}, Glyph {{ x: {:.6}, y: {:.6}, width: {:.6}, height: {:.6}, x_offset: {:2}, y_offset: {:2}, advance: {:2} }});     // Char({})", 
          ch,
          x as f32 / tw,
@@ -97,9 +108,9 @@ fn generate_font_def() {
          xo, yo, a, char::from_u32(ch as u32).unwrap());
    }
 
-   out.write(b"      m\n");
-   out.write(b"   };\n");
-   out.write(b"}\n");
+   out.write(b"      m\n").unwrap();
+   out.write(b"   };\n").unwrap();
+   out.write(b"}\n").unwrap();
 }
 
 fn generate_gl_bindings() {

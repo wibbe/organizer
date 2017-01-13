@@ -31,21 +31,11 @@ fn main() {
 
     let background = Color::new(40, 50, 60);
     let foreground = Color::new(230, 230, 230);
-/*
-    for i in 0..10 {
-        ui.print(i, i, format!("{}", i).as_str(), foreground, background);
-    }
-
-    ui.print(10, 10, "Hello World", foreground, background);
-*/
-    //ui.paint();
     
     app.paint();
     window.swap_buffers().unwrap();
 
-
     for event in window.wait_events() {
-        //ui.paint(w, h);
         app.paint();
         window.swap_buffers().unwrap();
 

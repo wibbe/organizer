@@ -6,7 +6,6 @@ use std::mem;
 use ::gl;
 
 static FONT_DATA: &'static [u8] = include_bytes!("../res/font.data");
-static FONT_SIZE: f32 = 32.0;
 
 include!(concat!(env!("OUT_DIR"), "/font_def.rs"));
 
@@ -16,9 +15,9 @@ pub struct Glyph {
    pub y: f32,
    pub width: f32,
    pub height: f32,
-   pub x_offset: u32,
-   pub y_offset: u32,
-   pub advance: u32,
+   pub x_offset: i32,
+   pub y_offset: i32,
+   pub advance: i32,
 }
 
 impl fmt::Display for Glyph {
